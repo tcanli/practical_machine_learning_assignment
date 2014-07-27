@@ -1,0 +1,251 @@
+---
+output: html_document
+---
+
+
+Practical Machine Learning Prediction Assignment
+========================================================
+
+
+```{r cache=TRUE}
+
+pml.testing <- read.csv("pml-testing.csv")
+pml.training <- read.csv("pml-training.csv")
+```
+
+Data allocation strategy:
+
+* Use 80% of the data for training
+* Use 10% of the data for cross-validation
+* Use 10% of the data for testing --This set will only be used once
+
+There are several alrogithms to choose from when it comes to classification problems. For this assignment, I have considered following two models:
+
+* Linear discriminant analysis (LDA)
+* Quadratic discriminant analysis (QDA)
+
+To decide which algorithm performs better on assignment data, I performed exploratory analysis, which can be summarized as follows:
+
+* Start with all the features that are available for all the training subjects
+* Train one predictor with LDA and one with QDA
+* Pick the model that outperforms, if both models are equally good pick LDA as it is simpler than QDA
+* Perform feature selection on the model that I picked
+
+
+Now that I know which analysis algorithm I will pursue, I will perform feature selection to reduce the number of features without compromising the prediction accuracy to obtain simpler model for better interpretability. Note that there are `r length(names(pml.training))-1` features in the training data.
+
+
+
+
+
+```{r}
+library(caret);
+library(kernlab);
+library(MASS);
+```
+
+```{r }
+pml.testing <- read.csv("pml-testing.csv")
+pml.training <- read.csv("pml-training.csv")
+
+inTraincv=createDataPartition(y=pml.training$classe,p=0.90,list=FALSE)
+training_and_cv=pml.training[inTraincv,]
+inTrain=createDataPartition(y=training_and_cv$classe,p=80/90.0,list=FALSE)
+training =training_and_cv[inTrain,]
+crossval = training_and_cv[-inTrain,]
+
+testing=pml.training[-inTraincv,]
+#fit=qda(classe ~ num_window + <others >, data=pml.training, subset=inTrain)
+```
+```{r  echo=FALSE}
+
+ft_qda=qda(classe ~ num_window+
+       total_accel_belt+   
+      roll_belt+pitch_belt+yaw_belt+total_accel_belt+
+      gyros_belt_x+gyros_belt_y+gyros_belt_z+
+       accel_belt_x+accel_belt_y+accel_belt_z+
+       magnet_belt_x+magnet_belt_y+magnet_belt_z +
+       
+       total_accel_arm+
+      roll_arm+ pitch_arm+ yaw_arm+ total_accel_arm+
+       gyros_arm_x+gyros_arm_y+gyros_arm_z+
+       accel_arm_x+accel_arm_y+accel_arm_z+
+       magnet_arm_x+magnet_arm_y+magnet_arm_z+
+     
+       total_accel_dumbbell+
+       roll_dumbbell+pitch_dumbbell+yaw_dumbbell+
+       magnet_dumbbell_x+magnet_dumbbell_y+magnet_dumbbell_z+
+      accel_dumbbell_x+accel_dumbbell_y+accel_dumbbell_z+
+       gyros_dumbbell_x+gyros_dumbbell_y+gyros_dumbbell_z+
+       
+        
+       total_accel_forearm+
+       roll_forearm+pitch_forearm+ yaw_forearm+
+       accel_forearm_x+accel_forearm_y+ accel_forearm_z+
+       magnet_forearm_x+magnet_forearm_y+ magnet_forearm_z+
+       gyros_forearm_x+gyros_forearm_y+gyros_forearm_z
+                     , data=training_and_cv, subset=inTrain)
+
+
+ft_lda=lda(classe ~ num_window+
+       total_accel_belt+   
+      roll_belt+pitch_belt+yaw_belt+total_accel_belt+
+      gyros_belt_x+gyros_belt_y+gyros_belt_z+
+       accel_belt_x+accel_belt_y+accel_belt_z+
+       magnet_belt_x+magnet_belt_y+magnet_belt_z +
+       
+       total_accel_arm+
+      roll_arm+ pitch_arm+ yaw_arm+ total_accel_arm+
+       gyros_arm_x+gyros_arm_y+gyros_arm_z+
+       accel_arm_x+accel_arm_y+accel_arm_z+
+       magnet_arm_x+magnet_arm_y+magnet_arm_z+
+     
+       total_accel_dumbbell+
+       roll_dumbbell+pitch_dumbbell+yaw_dumbbell+
+       magnet_dumbbell_x+magnet_dumbbell_y+magnet_dumbbell_z+
+      accel_dumbbell_x+accel_dumbbell_y+accel_dumbbell_z+
+       gyros_dumbbell_x+gyros_dumbbell_y+gyros_dumbbell_z+
+       
+        
+       total_accel_forearm+
+       roll_forearm+pitch_forearm+ yaw_forearm+
+       accel_forearm_x+accel_forearm_y+ accel_forearm_z+
+       magnet_forearm_x+magnet_forearm_y+ magnet_forearm_z+
+       gyros_forearm_x+gyros_forearm_y+gyros_forearm_z
+                     , data=training_and_cv, subset=inTrain)
+
+lda_pred=predict(ft_lda,crossval)
+qda_pred=predict(ft_qda,crossval)
+
+lda_accuracy=mean(lda_pred$class==crossval$classe,na.rm=TRUE)
+qda_accuracy=mean(qda_pred$class==crossval$classe,na.rm=TRUE)
+#ft.pred=predict(ft_lda,crossval)
+#table(ft.pred$class,testing$classe)
+#mean(ft.pred$class==testing$classe,na.rm=TRUE)
+```
+
+* LDA cross validation accuracy: `r lda_accuracy`
+* QDA cross validation accuracy: `r qda_accuracy`
+
+QDA outperformed LDA, hence, it is better fit than LDA for this data set.
+
+
+
+```{r echo=FALSE}
+ft=qda(classe~ 
+
+         roll_belt+pitch_belt+yaw_belt+total_accel_belt+
+         gyros_belt_x+gyros_belt_y+gyros_belt_z+
+         accel_belt_x+accel_belt_y+accel_belt_z+
+         magnet_belt_x+magnet_belt_y+magnet_belt_z +
+         
+         
+         roll_arm+ pitch_arm+ yaw_arm+ total_accel_arm+
+         gyros_arm_x+gyros_arm_y+gyros_arm_z+
+         accel_arm_x+accel_arm_y+accel_arm_z+
+         magnet_arm_x+magnet_arm_y+magnet_arm_z+
+         
+         
+         roll_dumbbell+pitch_dumbbell+yaw_dumbbell+
+         magnet_dumbbell_x+magnet_dumbbell_y+magnet_dumbbell_z+
+         accel_dumbbell_x+accel_dumbbell_y+accel_dumbbell_z+ 
+        
+         roll_forearm+pitch_forearm+ yaw_forearm+
+         accel_forearm_x+accel_forearm_y+ accel_forearm_z+
+         magnet_forearm_x+magnet_forearm_y+ magnet_forearm_z+
+         gyros_forearm_x+gyros_forearm_y
+       , data=training_and_cv, subset=inTrain)
+```
+```{r}
+qda_lean_pred=predict(ft,crossval)
+qda_accuracy_after_fs=mean(qda_lean_pred$class==crossval$classe,na.rm=TRUE)
+```
+
+Pruning the model:
+
+* Remove a feature
+* calculate the accurancy on cross validation
+* If accuracy does not decrease, remove the feature permanently, otherwise put the feature back in to model.
+* Repeat
+
+After feature selection number of parameters went down from 55 to 46. See appendix initial model and final model.
+
+* The accuracy is: `r qda_accuracy_after_fs`
+* The error rate is `r 1-qda_accuracy_after_fs`, and the expected error rate on test data will be close this value.
+
+
+
+```{r}
+qda_test_prediction = predict(ft,testing)
+qda_accuracy_on_test=mean(qda_test_prediction$class==testing$classe,na.rm=TRUE)
+```
+
+Finally, after feature selection is done, classifier accurancy is tested with previously unseen data ( test data)
+
+* Test Accuracy: `r qda_accuracy_on_test`
+* Error: `r 1-qda_accuracy_on_test`
+
+As we can see from error rate from cross-validation set and test set, they are very close to each other.
+
+The confusion matrix is as follows:
+```{r}
+table(ft.pred$class,testing$classe)
+```
+
+## Appendix
+```{r}
+# Initial model:
+ft_qda=qda(classe ~ num_window+
+       total_accel_belt+   
+      roll_belt+pitch_belt+yaw_belt+total_accel_belt+
+      gyros_belt_x+gyros_belt_y+gyros_belt_z+
+       accel_belt_x+accel_belt_y+accel_belt_z+
+       magnet_belt_x+magnet_belt_y+magnet_belt_z +
+       
+       total_accel_arm+
+      roll_arm+ pitch_arm+ yaw_arm+ total_accel_arm+
+       gyros_arm_x+gyros_arm_y+gyros_arm_z+
+       accel_arm_x+accel_arm_y+accel_arm_z+
+       magnet_arm_x+magnet_arm_y+magnet_arm_z+
+     
+       total_accel_dumbbell+
+       roll_dumbbell+pitch_dumbbell+yaw_dumbbell+
+       magnet_dumbbell_x+magnet_dumbbell_y+magnet_dumbbell_z+
+      accel_dumbbell_x+accel_dumbbell_y+accel_dumbbell_z+
+       gyros_dumbbell_x+gyros_dumbbell_y+gyros_dumbbell_z+
+       
+        
+       total_accel_forearm+
+       roll_forearm+pitch_forearm+ yaw_forearm+
+       accel_forearm_x+accel_forearm_y+ accel_forearm_z+
+       magnet_forearm_x+magnet_forearm_y+ magnet_forearm_z+
+       gyros_forearm_x+gyros_forearm_y+gyros_forearm_z
+        , data=training_and_cv, subset=inTrain)
+
+
+#Final model:
+ft=qda(classe~ 
+
+         roll_belt+pitch_belt+yaw_belt+total_accel_belt+
+         gyros_belt_x+gyros_belt_y+gyros_belt_z+
+         accel_belt_x+accel_belt_y+accel_belt_z+
+         magnet_belt_x+magnet_belt_y+magnet_belt_z +
+         
+         
+         roll_arm+ pitch_arm+ yaw_arm+ total_accel_arm+
+         gyros_arm_x+gyros_arm_y+gyros_arm_z+
+         accel_arm_x+accel_arm_y+accel_arm_z+
+         magnet_arm_x+magnet_arm_y+magnet_arm_z+
+         
+         
+         roll_dumbbell+pitch_dumbbell+yaw_dumbbell+
+         magnet_dumbbell_x+magnet_dumbbell_y+magnet_dumbbell_z+
+         accel_dumbbell_x+accel_dumbbell_y+accel_dumbbell_z+ 
+        
+         roll_forearm+pitch_forearm+ yaw_forearm+
+         accel_forearm_x+accel_forearm_y+ accel_forearm_z+
+         magnet_forearm_x+magnet_forearm_y+ magnet_forearm_z+
+         gyros_forearm_x+gyros_forearm_y
+       , data=training_and_cv, subset=inTrain)
+
+```
